@@ -1,0 +1,26 @@
+# Requirements file for ST5227 project
+
+# Math and data manipulation
+numpy
+pandas
+scipy
+
+# ML
+scikit-learn
+xgboost
+lightgbm
+pygam
+
+# Plots and visual helpers
+matplotlib
+seaborn
+tqdm
+
+# Formatting
+black
+black[jupyter]
+
+# Jupyter related
+jupyter
+ipykernel
+jupytext
