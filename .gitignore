@@ -1,0 +1,19 @@
+# Notebooks (jupytext manages .py files as source of truth)
+*.ipynb
+
+# Python
+__pycache__/
+*.pyc
+
+# Data
+data/
+
+# OS
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Editable install
+*.egg-info/
+

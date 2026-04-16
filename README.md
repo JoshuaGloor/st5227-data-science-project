@@ -6,21 +6,7 @@ from the [LTSG dataset](https://github.com/BlueSkyLT/siteselect_sg) from [Lan et
 ## Project Overview
 
 ```
-.
-|-- README.md
-|-- environment.yaml          # Conda environment file.
-|-- requirements.txt
-|-- setup.sh                  # Environment setup script.
-|-- jupytext.toml
-|-- data/                     # Raw CSVs (gitignored, see "Data" below).
-|-- notebooks/                # Paired .py / .ipynb via jupytext.
-|-- reports/                  # Generated figures and tables (gitignored).
-`-- src/
-    |-- __init__.py
-    |-- data.py               # Load and join the 5 CSVs.
-    |-- features.py           # Spatial feature engineering + target construction.
-    |-- harness.py            # Experiment harness (CV across models / seeds / targets).
-    `-- plots.py              # Plotting helpers.
+...
 ```
 
 ## Setup
@@ -52,7 +38,13 @@ conda env create -f environment.yaml
 conda activate st5227
 ```
 
-#### 3. Register the Jupyter kernel
+#### 3. Install project as editable package
+
+```bash
+pip install -e .
+```
+
+#### 4. Register the Jupyter kernel
 
 ```bash
 python -m ipykernel install --user --name=st5227 --display-name "Python (st5227)"
@@ -100,5 +92,6 @@ For a quick run, start JupyterLab with:
 ```bash
 jupyter lab
 ```
+Right-click a `.py` file and select **Open With > Notebook** to run it as a notebook.
 
 [^1]: To preserve formatting when playing around, run `bash setup.sh --dev` to install pre-commit hooks.

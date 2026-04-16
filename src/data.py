@@ -47,9 +47,19 @@ def download_data(
 
     zip_path = data_dir / "dataset.zip"
 
-    sentinel = data_dir / "bus_vol.csv"  # any one extracted CSV works
-    if sentinel.exists() and not force:
+    expected_files = [
+        "bus_vol.csv",
+        "bus_line.csv",
+        "hdb.csv",
+        "mrt.csv",
+        "poi.csv",
+    ]
+
+    missing = [f for f in expected_files if not (data_dir / f).exists()]
+    if not missing and not force:
         return data_dir
+    if missing:
+        print(f"Missing files: {', '.join(missing)}. Re-downloading...")
 
     if not zip_path.exists() or force:
         print(f"Downloading {url} ...")
@@ -57,7 +67,16 @@ def download_data(
 
     print(f"Extracting to {data_dir} ...")
     with zipfile.ZipFile(zip_path) as z:
+        # Check if all files share a common top-level directory
+        top_dirs = {name.split("/")[0] for name in z.namelist()}
         z.extractall(data_dir)
+
+        # If there's a single wrapper folder, move contents up
+        if len(top_dirs) == 1:
+            wrapper = data_dir / top_dirs.pop()
+            for item in wrapper.iterdir():
+                item.rename(data_dir / item.name)
+            wrapper.rmdir()
 
     return data_dir
 

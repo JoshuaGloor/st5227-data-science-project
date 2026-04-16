@@ -36,6 +36,9 @@ fi
 # [manual] run below command with the env name found in the `environment.yaml` file.
 conda activate "$ENV"
 
+# [manual] Install project as editable package
+pip install -e .
+
 # Register Jupyter kernel
 # [manual] run below command with the env name found in the `environment.yaml` file.
 python -m ipykernel install --user --name="$ENV" --display-name "Python ($ENV)"
