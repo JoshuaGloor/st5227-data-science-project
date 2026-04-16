@@ -1,8 +1,7 @@
-# ST5227 — Applied Statistical Learning Project
+# ST5227 - Applied Statistical Learning - Project
 
 Predicting Singapore bus stop passenger volume from spatial features engineered
-from the [LTSG dataset](https://github.com/BlueSkyLT/siteselect_sg) (POIs, HDB
-buildings, MRT stations).
+from the [LTSG dataset](https://github.com/BlueSkyLT/siteselect_sg) from [Lan et al. (2022)](https://www.mdpi.com/2072-4292/14/15/3579).
 
 ## Project Overview
 
@@ -24,30 +23,15 @@ buildings, MRT stations).
     `-- plots.py              # Plotting helpers.
 ```
 
-## Data
-
-Download `dataset.zip` from the
-[LTSG repo](https://github.com/BlueSkyLT/siteselect_sg) and extract its contents
-into `data/`. After extraction the directory should contain:
-
-```
-data/
-|-- bus_line.csv
-|-- bus_vol.csv
-|-- hdb.csv
-|-- mrt.csv
-`-- poi.csv
-```
-
 ## Setup
 
-Make sure you have the following installed:
+### Prerequisites
 
-* miniconda
+* A [conda](https://docs.conda.io/en/latest/) installation, e.g., Miniconda (recommended) or Anaconda.
 
 ### Python Environment Setup and Jupyter Kernel
 
-If you have a Bash-compatible shell, you can set up everything automatically:
+If you have a Bash-compatible shell, you can set up everything automatically[^1]:
 
 ```bash
 source setup.sh
@@ -74,26 +58,47 @@ conda activate st5227
 python -m ipykernel install --user --name=st5227 --display-name "Python (st5227)"
 ```
 
-## Running the Code
+## Data
 
-After setup, start Jupyter:
+The data is downloaded automatically by `src/data.py` on first use. Any of the
+loader functions (`load_bus_vol`, `load_poi`, `load_hdb`, `load_mrt`,
+`load_bus_line`) will fetch and extract the upstream zip into `data/` if it is
+not already present. From a notebook:
 
-```bash
-jupyter notebook
+```python
+from src.data import load_bus_vol
+bus_vol = load_bus_vol()
 ```
 
-Open notebooks under `notebooks/` and select the `Python (st5227)` kernel. As
-per `jupytext.toml`, the `.py` files are the source of truth — open them via
-right-click > Open With > Jupyter Notebook so they are paired with their
-`.ipynb` counterparts. Only commit the `.py` files.
+After the first call, `data/` will contain:
 
-## Workflow Notes
+```
+data/
+|-- dataset.zip
+|-- bus_line.csv
+|-- bus_vol.csv
+|-- hdb.csv
+|-- mrt.csv
+`-- poi.csv
+```
 
-- Format `.py` files before committing:
-  ```bash
-  black --line-length 119 <file.py>
-  ```
-- Format paired notebooks via jupytext:
-  ```bash
-  jupytext --pipe "black --line-length 119 -" <notebook.ipynb>
-  ```
+### Manual fallback
+
+If the automatic download fails (e.g., no network at grading time), download
+`dataset.zip` manually from the
+[LTSG repo](https://github.com/BlueSkyLT/siteselect_sg) and extract it into
+`data/`. The loader detects existing CSVs and skips the download.
+
+
+## Usage
+
+The notebooks in `notebooks/` are stored as `.py` files via
+[jupytext](https://jupytext.readthedocs.io/). They can be opened as notebooks
+in VS Code or your preferred editor. Select the `st5227` kernel when prompted.
+
+For a quick run, start JupyterLab with:
+```bash
+jupyter lab
+```
+
+[^1]: To preserve formatting when playing around, run `bash setup.sh --dev` to install pre-commit hooks.

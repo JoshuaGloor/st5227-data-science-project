@@ -1,6 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
+# For dev setup only
+DEV=false
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --dev) DEV=true; shift ;;
+        *) echo "Unknown option: $1"; exit 1 ;;
+    esac
+done
+
 ENV="st5227"
 
 # Check if conda exists in PATH
@@ -32,3 +41,9 @@ conda activate "$ENV"
 python -m ipykernel install --user --name="$ENV" --display-name "Python ($ENV)"
 
 echo "Setup completed: Environment '$ENV' created and Jupyter kernel registered."
+
+# Dev setup
+if $DEV; then
+    pre-commit install
+    echo "Pre-commit hooks installed."
+fi

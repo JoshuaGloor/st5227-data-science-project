@@ -19,6 +19,7 @@ tqdm
 # Formatting
 black
 black[jupyter]
+pre-commit
 
 # Jupyter related
 jupyter
