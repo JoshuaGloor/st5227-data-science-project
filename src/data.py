@@ -18,6 +18,10 @@ from urllib.request import urlretrieve
 
 import pandas as pd
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def download_data(
     data_dir: Path | None = None,
@@ -59,13 +63,13 @@ def download_data(
     if not missing and not force:
         return data_dir
     if missing:
-        print(f"Missing files: {', '.join(missing)}. Re-downloading...")
+        logger.info(f"Missing files: {', '.join(missing)}. Re-downloading...")
 
     if not zip_path.exists() or force:
-        print(f"Downloading {url} ...")
+        logger.info(f"Downloading {url} ...")
         urlretrieve(url, zip_path)
 
-    print(f"Extracting to {data_dir} ...")
+    logger.info(f"Extracting to {data_dir} ...")
     with zipfile.ZipFile(zip_path) as z:
         # Check if all files share a common top-level directory
         top_dirs = {name.split("/")[0] for name in z.namelist()}
