@@ -94,4 +94,6 @@ jupyter lab
 ```
 Right-click a `.py` file and select **Open With > Notebook** to run it as a notebook.
 
+For VS Code, install the [jupytext extension](https://marketplace.visualstudio.com/items?itemName=congyiwu.vscode-jupytext) and right-click the `.py` file and select **Open as a Jupyter Notebook**.
+
 [^1]: To preserve formatting when playing around, run `bash setup.sh --dev` to install pre-commit hooks.
