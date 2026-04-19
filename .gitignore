@@ -17,3 +17,5 @@ data/
 # Editable install
 *.egg-info/
 
+# IDE garbage
+.vscode/

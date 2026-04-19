@@ -52,8 +52,10 @@ python -m ipykernel install --user --name=st5227 --display-name "Python (st5227)
 
 ## Data
 
-The data is downloaded automatically by `src/data.py` on first use. Any of the
-loader functions (`load_bus_vol`, `load_poi`, `load_hdb`, `load_mrt`,
+### LTSG dataset
+
+The LTSG data is downloaded automatically by `src/data.py` on first use. Any of
+the loader functions (`load_bus_vol`, `load_poi`, `load_hdb`, `load_mrt`,
 `load_bus_line`) will fetch and extract the upstream zip into `data/` if it is
 not already present. From a notebook:
 
@@ -74,13 +76,43 @@ data/
 `-- poi.csv
 ```
 
-### Manual fallback
+#### Manual fallback
 
-If the automatic download fails (e.g., no network at grading time), download
-`dataset.zip` manually from the
-[LTSG repo](https://github.com/BlueSkyLT/siteselect_sg) and extract it into
+If the automatic download fails (e.g., network or other problems), download
+`dataset.zip` manually from the [LTSG repo](https://github.com/BlueSkyLT/siteselect_sg) and extract it into
 `data/`. The loader detects existing CSVs and skips the download.
 
+### LTA bus stop coordinates
+
+The LTSG dataset does not include coordinates for bus stops, so these are
+fetched separately from the
+[LTA Bus Stop dataset on data.gov.sg](https://data.gov.sg/datasets/d_3f172c6feb3f4f92a2f47d93eed2908a/view).
+The loader `load_bus_stops` downloads the GeoJSON via the data.gov.sg API on
+first use, parses it into a `stop_id`/`lat`/`lng` table, and caches it as
+`data/bus_stops.csv`:
+
+```python
+from src.data import load_bus_stops
+bus_stops = load_bus_stops()
+```
+
+Since the LTA dataset reflects the current bus network while the LTSG dataset
+is a few years old, a small number of stops (~23 of ~5000) in `bus_vol` do not
+have a match in the LTA data (likely retired or renumbered). These are dropped
+at merge time.
+
+#### Manual fallback
+
+If the data.gov.sg API call fails, download the GeoJSON manually from the
+[dataset page](https://data.gov.sg/datasets/d_3f172c6feb3f4f92a2f47d93eed2908a/view)
+and pass the path to the loader:
+
+```python
+from pathlib import Path
+from src.data import load_bus_stops
+
+bus_stops = load_bus_stops(local_geojson=Path("/your/download/path/LTABusStop.geojson"))
+```
 
 ## Usage
 
