@@ -110,6 +110,15 @@ def load_bus_stops(
         logger.info(f"Skipped {skipped} invalid bus stop entries")
 
     df = pd.DataFrame(rows)
+
+    before = len(df)
+    # The LTA bus stop dataset contains ~18 duplicate stop_id entries (same ID, slightly different coordinates).
+    # We keep the first occurrence in each case. Some duplicates distances are tiny some slightly bigger,
+    # it is what it is...
+    df = df.drop_duplicates(subset="stop_id", keep="first").reset_index(drop=True)
+    if len(df) < before:
+        logger.info(f"Dropped {before - len(df)} duplicate stop_id entries from LTA data")
+
     df.to_csv(csv_path, index=False)
 
     logger.info(f"Saved {len(df)} bus stops to {csv_path}")

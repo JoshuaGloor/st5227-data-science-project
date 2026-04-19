@@ -19,3 +19,8 @@ data/
 
 # IDE garbage
 .vscode/
+
+# Report
+report/*
+!report/report.tex
+!report/bib.bib
