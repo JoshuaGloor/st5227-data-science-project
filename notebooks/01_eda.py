@@ -34,6 +34,7 @@ import seaborn as sns
 
 from src.data import load_bus_vol, load_bus_line, load_hdb, load_mrt, load_poi
 from src.eda_helpers import column_summary
+from src.plot_helpers import savefig
 
 # %% [markdown]
 # ## 1 `bus_vol`: temporal schema and target design
@@ -112,6 +113,8 @@ for ax, day in zip(axes, ["WD", "H"]):
     ax.grid(alpha=0.3)
     ax.legend(fontsize=9, loc="upper left")
 
+
+savefig("step_plot")
 plt.show()
 
 # %% [markdown]
@@ -153,6 +156,7 @@ for ax, day in zip(axes, ["WD", "H"]):
     ax.grid(alpha=0.3, axis="x")
     ax.legend(loc="upper right")
 
+savefig("violin_plot")
 plt.show()
 
 # %% [markdown]
@@ -195,6 +199,7 @@ for ax, day in zip(axes, ["WD", "H"]):
     ax.legend(loc="upper left")
     ax.grid(alpha=0.3)
 
+savefig("scatter_tap_in_out")
 plt.show()
 
 # %% [markdown]

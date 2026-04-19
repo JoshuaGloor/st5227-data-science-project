@@ -42,6 +42,7 @@ from sklearn.preprocessing import StandardScaler
 from tqdm.auto import tqdm
 
 from src.data import load_bus_stops
+from src.plot_helpers import savefig
 
 RANDOM_STATE = 42
 
@@ -108,6 +109,7 @@ ax.set_title("Cluster centroids across the four targets")
 ax.legend(title="Target", loc="upper right")
 ax.grid(alpha=0.3, axis="y")
 plt.tight_layout()
+savefig("cluster_bar")
 plt.show()
 
 # %% [markdown]
@@ -134,6 +136,7 @@ legend1 = ax.legend(*scatter.legend_elements(), title="Cluster", loc="lower righ
 ax.add_artist(legend1)
 ax.grid(alpha=0.3)
 plt.tight_layout()
+savefig("cluster_geo")
 plt.show()
 
 # Drop cluster column before continuing with regression
@@ -301,6 +304,7 @@ for ax, target in zip(axes, TARGET_NAMES):
     ax.set_ylabel("RMSE")
     ax.tick_params(axis="x", rotation=30)
 plt.tight_layout()
+savefig("rmse_box")
 plt.show()
 
 # %% [markdown]
