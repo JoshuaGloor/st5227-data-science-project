@@ -1,3 +1,20 @@
+# -*- coding: utf-8 -*-
+# ---
+# jupyter:
+#   jupytext:
+#     cell_metadata_filter: -all
+#     custom_cell_magics: kql
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.11.2
+#   kernelspec:
+#     display_name: Python (st5227)
+#     language: python
+#     name: st5227
+# ---
+
 # %% [markdown]
 # # 01 Exploratory Data Analysis
 #
@@ -212,8 +229,8 @@ column_summary(hdb, sample_values=3)
 # Based on this, we derive the following features per bus stop using `lat`/`lng` to find HBD blocks within 500m:
 # - `hdb_units_500m`: sum of `total_dwelling_units` within 500m.<br>
 #   *Reason*: total units as a proxy for people living nearby.
-# - `hdb_rental_frac_500m`: sum of (`1room_rental` + `2room_rental` + `3room_rental` + `other_room_rental`) divided by sum of `total_dwelling_units`, within 500m.<br>
-#   *Reason*: rental fraction as proxy for lower-income households. Low-income citizens tend to be more dependent on public transport.
+# - `hdb_rentals_500m`: sum of (`1room_rental` + `2room_rental` + `3room_rental` + `other_room_rental`) within 500m.<br>
+#   *Reason*: rental units as proxy for lower-income households. Low-income citizens tend to be more dependent on public transport.
 # - `hdb_commercial_500m`: count of blocks within 500m using `commercial == 'Y'`.<br>
 #   *Reason*: commercial HDBs attract passenger activity.
 #
@@ -321,7 +338,7 @@ column_summary(bus_line, sample_values=3)
 # | Name | Source | Definition |
 # |---|---|---|
 # | `hdb_units_500m` | HDB | Sum of `total_dwelling_units` within 500m |
-# | `hdb_rental_frac_500m` | HDB | Rental units divided by total dwelling units, aggregated within 500m |
+# | `hdb_rentals_500m` | HDB | Rental units within 500m |
 # | `hdb_commercial_500m` | HDB | Count of blocks with `commercial == 'Y'` within 500m |
 # | `dist_nearest_mrt` | MRT | Haversine distance (m) to closest MRT station |
 # | `mrt_within_1km` | MRT | Count of distinct MRT stations within 1km |
@@ -333,3 +350,6 @@ column_summary(bus_line, sample_values=3)
 # | `poi_worship_500m` | POI | Count of religious-site POIs within 500m |
 # | `n_lines` | bus_line | Number of distinct bus lines serving the stop |
 # | `is_terminal` | bus_line | Whether the stop is a first or last stop in any route |
+
+# %% [markdown]
+#
