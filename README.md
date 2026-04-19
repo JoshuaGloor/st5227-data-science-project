@@ -3,11 +3,7 @@
 Predicting Singapore bus stop passenger volume from spatial features engineered
 from the [LTSG dataset](https://github.com/BlueSkyLT/siteselect_sg) from [Lan et al. (2022)](https://www.mdpi.com/2072-4292/14/15/3579).
 
-## Project Overview
-
-```
-...
-```
+The pdf version of the report can be found [here](report/report.pdf)
 
 ## Setup
 
