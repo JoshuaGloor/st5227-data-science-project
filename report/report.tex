@@ -1,0 +1,452 @@
+\documentclass{article}
+
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+\usepackage[accepted]{icml2025}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[capitalize,noabbrev]{cleveref}
+\usepackage[textsize=tiny]{todonotes}
+
+\icmltitlerunning{Predicting Bus Stop Passenger Volume in Singapore}
+
+\begin{document}
+
+\twocolumn[
+  \icmltitle{Predicting Bus Stop Passenger Volume in Singapore\\
+    from Spatial and Network Features}
+
+  \begin{icmlauthorlist}
+    \icmlauthor{Joshua Gloor}{nus}
+  \end{icmlauthorlist}
+
+  \icmlaffiliation{nus}{ST5227 Applied Statistical Learning, National University of Singapore}
+
+  \icmlcorrespondingauthor{Joshua Gloor}{joshua@gloor.fyi}
+
+  \icmlkeywords{regression, public transit, feature engineering, spatial data}
+
+  \vskip 0.3in
+]
+
+% \printAffiliationsAndNotice{\icmlEqualContribution}  % commented out; ICML cannot
+\footnotetext[1]{ST5227 Applied Statistical Learning, National University of Singapore.}
+
+\begin{abstract}
+  We predict passenger volume at Singapore bus stops from spatial and network
+  features derived from public datasets on residential density, MRT
+  connectivity, points of interest, and bus-line structure. Using engineered
+  per-stop features, we compare linear and tree-based models
+  across four temporal targets (weekday morning, midday, evening, and
+  weekend/holiday averages) under repeated train/test splits.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+Public bus networks carry the majority of public-transport trips in Singapore,
+and understanding where ridership concentrates is central to operational and
+planning decisions: where to add capacity, where to open new interchanges,
+and where to consolidate under-used stops. Passenger counts are expensive to
+collect directly, but a large amount of information about a stop's
+surroundings is freely available --- residential density, proximity to rail,
+nearby amenities, and the stop's role in the bus network itself. It is
+therefore useful to know how well such features, on their own, predict the
+volume a stop will see.
+
+We treat this as a supervised regression problem. For each stop we construct
+thirteen features from five public datasets and predict four summary volumes
+per stop: mean hourly boardings-plus-alightings on weekday mornings,
+weekday middays, weekday evenings, and weekend/holiday daytimes. The four
+targets let us ask a secondary question: do the same features drive
+ridership in different parts of the week, or does the relationship change
+between commute and leisure periods?
+
+The project has three goals, aligned with the questions that a transit
+operator would naturally ask: (i) \emph{predictive}, which class of models
+fits this problem best; (ii) \emph{inferential}, which covariates carry the
+signal and whether the data-generating mechanism looks linear; and (iii)
+\emph{practical}, whether a simpler, interpretable model is sufficient or
+whether the accuracy gap to a black-box model is worth the loss of
+interpretability.
+
+\section{Data}
+\label{sec:data}
+
+\paragraph{Sources.}
+We use the LTSG dataset \citep{rs14153579}, which bundles five tables
+relevant to Singapore transit: hourly bus passenger counts
+(\texttt{bus\_vol}), bus-line routing (\texttt{bus\_line}), residential
+block attributes (\texttt{hdb}), MRT station locations (\texttt{mrt}), and
+geocoded points of interest (\texttt{poi}). LTSG does not include
+coordinates for bus stops, so we join them against the LTA Bus Stop dataset
+on data.gov.sg \citep{lta2025busstop}. Of $\sim$5,000 stops in \texttt{bus\_vol}, 23 ($<0.5\%$)
+have no match in the current LTA data and are dropped; this is plausibly
+due to stops being retired between the two datasets' collection periods.
+After the join and requiring complete targets (see below), $n = 4985$ stops remain.
+
+\paragraph{Target construction.}
+The raw \texttt{bus\_vol} table gives hourly tap-in (\texttt{in}) and
+tap-out (\texttt{out}) counts per stop, labelled weekday (WD) or holiday/
+weekend (H). Visualisation of the hourly distribution
+(\cref{fig:hourly-profile}) shows two clear phenomena: a right-skewed
+distribution across stops at every hour, and sharply different temporal
+patterns on weekdays versus weekends. We therefore define volume as
+$\text{in}+\text{out}$ and construct four targets per stop by averaging
+volume over four hour ranges:
+
+\begin{itemize}
+  \item \texttt{wd\_am}: weekday, 06:00--08:59 (morning peak);
+  \item \texttt{wd\_pm}: weekday, 16:00--19:59 (evening peak);
+  \item \texttt{wd\_midday}: weekday, 09:00--15:59 (off-peak);
+  \item \texttt{h\_avg}: weekend/holiday, 06:00--22:59 (daytime).
+\end{itemize}
+
+The evening peak is extended to 19:59 to reflect later typical working
+hours locally. All four are continuous scalars, so the supervised task is
+regression.
+
+\paragraph{Feature construction.}
+We engineer $p = 13$ features per stop, all computable from the stop's
+coordinates and the five source tables. Spatial features use a Haversine
+distance and are computed against stop centroids. \cref{tab:features}
+summarises the feature set; rationale for each is given in the EDA
+notebook. Radii (500\,m for HDB and POI, 1\,km for MRT) reflect typical
+walking distances in Singapore: longer for rail because riders walk further
+to stations.
+
+\begin{table}[t]
+  \centering
+  \small
+  \caption{Per-stop features. All counts and sums are computed within the
+    stated radius of the stop. \texttt{is\_terminal} is binary; all other
+    features are non-negative reals or counts.}
+  \label{tab:features}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    Name                           & Source    & Description                  \\
+    \midrule
+    \texttt{hdb\_units\_500m}      & HDB       & dwelling units               \\
+    \texttt{hdb\_rentals\_500m}    & HDB       & rental units                 \\
+    \texttt{hdb\_commercial\_500m} & HDB       & commercial blocks            \\
+    \texttt{dist\_nearest\_mrt}    & MRT       & metres to nearest station    \\
+    \texttt{mrt\_within\_1km}      & MRT       & MRT stations within 1\,km    \\
+    \texttt{poi\_education\_500m}  & POI       & schools, universities        \\
+    \texttt{poi\_food\_500m}       & POI       & restaurants, cafes, bars     \\
+    \texttt{poi\_health\_500m}     & POI       & clinics, hospitals           \\
+    \texttt{poi\_leisure\_500m}    & POI       & parks, museums, attractions  \\
+    \texttt{poi\_shopping\_500m}   & POI       & retail, malls, supermarkets  \\
+    \texttt{poi\_worship\_500m}    & POI       & religious sites              \\
+    \texttt{n\_lines}              & bus\_line & distinct bus lines at stop   \\
+    \texttt{is\_terminal}          & bus\_line & first/last stop on any route \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Missingness.}
+There are no null values in the raw feature tables. However,
+\texttt{bus\_vol} does not record zero-volume hours explicitly --- a stop
+with no activity during a given hour simply has no row for that cell.
+A small number of stops are missing observations for at least one
+target bucket --- 15 stops are missing weekday midday data, 13 are
+missing weekday morning, and a handful have gaps in the other buckets.
+These partial rows are dropped, leaving $n = 4985$ stops with complete
+targets for modelling.
+
+\paragraph{Subsetting.}
+No further subsetting is applied. The dataset size (a few thousand stops
+with thirteen features) is well within what all methods in the course
+handle without downsampling.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.95\columnwidth]{../reports/step_plot}
+  \caption{Mean hourly tap-in (blue) and tap-out (orange) across stops, with
+    shaded IQR bands, on weekdays (left) and weekends/holidays (right).
+    Weekday peaks are pronounced and directionally asymmetric; weekend
+    volume is flatter and smaller. Motivates the four-target split.}
+  \label{fig:hourly-profile}
+\end{figure}
+
+\section{Methods}
+\label{sec:methods}
+
+We compare a set of regression models chosen to span the main mechanisms
+the course covered: pure linear, regularised linear, and two tree ensembles.
+Running a range from rigidly linear to
+flexibly nonlinear lets us see directly how much structure the data
+supports.
+
+\paragraph{Models.}
+\begin{itemize}
+  \item \textbf{Linear regression} (OLS). Baseline; gives a reference for
+        how much of the variance is explained by simple additive effects.
+  \item \textbf{Ridge regression} with $\ell_2$ penalty. Guards against
+        ill-conditioning from correlated features (e.g.\ HDB units and rentals) and provides a fair linear benchmark.
+  \item \textbf{Random forest}. Flexible nonlinear, captures
+        interactions. Standard black-box reference.
+  \item \textbf{Gradient boosted trees}. Typically the strongest tabular
+        baseline; tests whether an ensemble boosting approach materially
+        beats a random forest here.
+\end{itemize}
+
+Each model is fit independently on each of the four targets; we do not
+attempt joint multi-output training (this is discussed as a limitation in
+\cref{sec:limitations}).
+
+\paragraph{Evaluation protocol.}
+We report 5-fold cross-validated performance, which gives a distribution
+of five test scores per model per target rather than a single number.
+Folds are shuffled once with a fixed seed, and the same fold indices are
+used for every model, so pairwise comparisons are on matched test sets.
+The primary metric is test RMSE on the natural passenger-count scale;
+mean absolute error (MAE) is reported alongside as a robustness check.
+Because targets are right-skewed, models are trained on $\log(1+y)$ and
+predictions are inverse-transformed before scoring.
+
+Statistical significance of pairwise model differences is assessed with
+a paired $t$-test across folds: paired because models are evaluated on
+identical folds, which removes fold-level variance (some folds contain
+harder test stops than others). A small $p$-value indicates consistent
+outperformance across folds rather than luck on particular splits.
+
+\paragraph{Hyperparameters.}
+Ridge $\alpha$ is selected by \texttt{RidgeCV} over 20 values logspaced in
+$[10^{-2}, 10^{3}]$, using its built-in leave-one-out criterion on the
+outer training fold. For the tree ensembles, a nested 3-fold
+cross-validation with \texttt{GridSearchCV} selects random forest's
+\texttt{min\_samples\_leaf} from $\{5,10,20\}$, and gradient boosting's
+\texttt{learning\_rate} from $\{0.05,0.1\}$ and \texttt{max\_depth} from
+$\{\text{None},5,8\}$. Random-forest tree count is fixed at 200, which
+is well into the diminishing-returns regime for this dataset size;
+gradient boosting uses the library's default of 100 trees with early
+stopping, so its effective count is data-dependent.
+
+\section{Results}
+\label{sec:results}
+
+\paragraph{Gradient boosting wins on every target.}
+\cref{tab:main-results} reports test RMSE across all four models and
+targets. Gradient boosting is the lowest-error model on every target,
+with random forest a close second, ridge third, and linear regression
+fourth. The ranking is identical across targets. Relative to the linear
+baseline, gradient boosting reduces RMSE by $36\%$ on
+\texttt{wd\_am}, $35\%$ on \texttt{wd\_pm}, $54\%$ on
+\texttt{wd\_midday}, and $47\%$ on \texttt{h\_avg}.
+
+\begin{table}[t]
+  \centering
+  \small
+  \caption{Test RMSE (mean over 5 folds) by model and target; lower is
+    better. Bold: best per target.}
+  \label{tab:main-results}
+  \begin{tabular}{@{}lcccc@{}}
+    \toprule
+    Model          & \texttt{wd\_am}   & \texttt{wd\_pm}   & \texttt{wd\_midday} & \texttt{h\_avg}  \\
+    \midrule
+    Linear         & 4804.4            & 4667.0            & 4357.5              & 1466.8           \\
+    Ridge          & 4679.9            & 4550.3            & 4201.7              & 1416.0           \\
+    Random forest  & 3232.8            & 3299.4            & 2166.9              & 868.1            \\
+    Gradient boost & $\mathbf{3079.0}$ & $\mathbf{3052.3}$ & $\mathbf{2019.0}$   & $\mathbf{771.3}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{The mechanism is strongly nonlinear.}
+The gap between linear and tree-based models is the dominant effect in
+the comparison: $\sim$1500--2300 RMSE points across all four targets,
+corresponding to a roughly $35$--$55\%$ error reduction. That the tree
+models also interact features (gradient boosting and random forest
+both split on thresholds and combine splits multiplicatively) is
+consistent with the mechanism being multivariate-nonlinear, not a
+failure to include the right linear terms.
+
+Interestingly, the paired $t$-test does \emph{not} declare the
+tree-vs-linear gaps significant at $p<0.05$ despite their size
+(\cref{tab:sig}; $p$-values range 0.12--0.27). The reason is visible in
+\cref{fig:rmse-box}: linear-model RMSE varies enormously across folds
+(interquartile range $\sim$2500--6000 on \texttt{wd\_am}), which inflates
+the test statistic's denominator. The size of the gap is real; the test
+simply lacks power against this much fold-level variance with five
+folds. We report the raw difference alongside the $p$-value for this
+reason.
+
+\paragraph{Ridge barely improves over OLS.}
+Ridge reduces RMSE by only $2$--$4\%$ across targets, confirming that
+multicollinearity is not the bottleneck for linear fit. The 13 features
+come from different source tables and use different radii, so they are
+reasonably de-correlated by design. Regularisation is not what linear
+models need here --- more flexible functional form is.
+
+\paragraph{Gradient boosting vs.\ random forest.}
+GradBoost's edge over random forest is small in magnitude (97--247
+RMSE) but more consistent across folds and reaches significance on
+\texttt{wd\_am} ($p = 0.003$) and \texttt{h\_avg} ($p = 0.027$). For
+\texttt{wd\_pm} and \texttt{wd\_midday} the difference does not reach
+significance. The practical implication is that choice of tree
+ensemble matters less than the linear-vs-tree decision: either
+tree-based option closes nearly all of the gap against the linear
+baseline.
+
+\begin{table}[t]
+  \centering
+  \small
+  \caption{Paired $t$-test comparing gradient boosting (best per target)
+    against each alternative. $\Delta$RMSE is the excess RMSE of the
+    alternative. Bold: significant at $p<0.05$.}
+  \label{tab:sig}
+  \begin{tabular}{@{}llcc@{}}
+    \toprule
+    Target              & Comparison     & $\Delta$RMSE & $p$-value        \\
+    \midrule
+    \texttt{wd\_am}     & GB vs.\ Linear & 1725.4       & 0.258            \\
+                        & GB vs.\ Ridge  & 1600.9       & 0.267            \\
+                        & GB vs.\ RF     & 153.8        & $\mathbf{0.003}$ \\
+    \midrule
+    \texttt{wd\_pm}     & GB vs.\ Linear & 1614.7       & 0.259            \\
+                        & GB vs.\ Ridge  & 1498.1       & 0.267            \\
+                        & GB vs.\ RF     & 247.1        & 0.104            \\
+    \midrule
+    \texttt{wd\_midday} & GB vs.\ Linear & 2338.5       & 0.123            \\
+                        & GB vs.\ Ridge  & 2182.7       & 0.131            \\
+                        & GB vs.\ RF     & 147.8        & 0.097            \\
+    \midrule
+    \texttt{h\_avg}     & GB vs.\ Linear & 695.5        & 0.160            \\
+                        & GB vs.\ Ridge  & 644.7        & 0.171            \\
+                        & GB vs.\ RF     & 96.8         & $\mathbf{0.027}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.95\columnwidth]{../reports/rmse_box}
+  \caption{Per-fold test RMSE by model, one panel per target. Tree-based
+    models (random forest, gradient boosting) are consistently far
+    below linear models, but linear-model RMSE also varies dramatically
+    across folds, which explains why the large gap does not reach
+    statistical significance in a paired test.}
+  \label{fig:rmse-box}
+\end{figure}
+
+\section{Stop Typology via Clustering}
+\label{sec:clusters}
+
+To complement the supervised analysis, we cluster stops on their
+four-target usage profile (each stop's target vector normalised to sum
+to 1) and ask whether natural groupings correspond to interpretable
+transit archetypes. Normalising to profiles separates temporal
+\emph{pattern} from overall \emph{busyness} --- an unnormalised clustering
+on this data simply ranks stops by total volume, which is not what we
+want. We fit K-means with $K = 4$, motivated by the regimes visible in
+the hourly data (weekday morning peak, weekday evening peak, midday
+off-peak, weekend) plus a natural split between morning-origin and
+evening-destination stops.
+
+\paragraph{Four archetypes emerge.}
+\cref{tab:clusters} labels the resulting clusters.
+
+\begin{table}[t]
+  \centering
+  \small
+  \caption{K-means cluster archetypes ($K = 4$), fit on per-stop
+    normalised target profiles.}
+  \label{tab:clusters}
+  \begin{tabular}{@{}cll@{}}
+    \toprule
+    $k$ & Profile                            & Interpretation        \\
+    \midrule
+    0   & AM $>$ PM $>$ midday $>$ weekend   & General residential   \\
+    1   & Dominant AM, near-zero weekend     & Residential origin    \\
+    2   & Dominant PM, near-zero weekend     & Workplace destination \\
+    3   & Even AM / PM / midday, low weekend & Mixed-use             \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Geographic coherence.}
+The clustering operates on temporal profiles only --- coordinates are
+not used --- yet the archetypes lay out coherently on the map
+(\cref{fig:cluster-geo}). Morning-origin and evening-destination stops
+(clusters 1 and 2) concentrate in the western region around Jurong, the
+part of Singapore with the clearest residential--industrial commute
+structure: residents tap in during the morning rush at dormitory-style
+estates and tap out in the evening at workplace clusters. Balanced and
+mixed-use stops (clusters 0 and 3) dominate elsewhere, including the
+core and the northeastern residential belt.
+
+No cluster is dominated by weekend ridership; weekend volume is
+uniformly modest across all archetypes. Temporal variation in this
+network is primarily a weekday phenomenon, which also frames the
+supervised result that weekend prediction is the hardest of the four
+targets.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.95\columnwidth]{../reports/cluster_geo}
+  \caption{Singapore bus stops coloured by K-means cluster ($K = 4$),
+    fit on normalised target profiles. Morning-origin (red, cluster 1)
+    and evening-destination (pink, cluster 2) stops concentrate in the
+    western Jurong region; balanced (blue, 0) and mixed-use (cyan, 3)
+    archetypes dominate elsewhere.}
+  \label{fig:cluster-geo}
+\end{figure}
+
+\section{Limitations}
+\label{sec:limitations}
+
+Several caveats qualify the findings.
+
+\emph{Temporal scope.} LTSG is a snapshot from one period; ridership
+patterns shift with urban development, COVID-era work-from-home
+adjustments, and new MRT lines. Our features reflect current
+infrastructure from LTA; a small mismatch between the two periods is
+unavoidable.
+
+\emph{Spatial aggregation choices.} The 500\,m / 1\,km radii are
+defensible but not optimised.
+
+\emph{Feature coverage.} We do not use POI quality signals (ratings, price
+level) or bus-timing columns (first/last bus, which could yield a
+service-span feature). Including these is a natural extension.
+
+\emph{Independence assumption.} Our evaluation protocol treats stops as
+i.i.d.\ samples, but stops close together share the same local
+environment and likely have correlated volumes.
+
+\emph{Four separate models.} Fitting each target independently ignores
+the clear correlation between, e.g., \texttt{wd\_am} and \texttt{wd\_pm}.
+A multi-output model could share strength and yield tighter estimates,
+particularly for the smaller weekend signal.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+\section*{Impact Statement}
+
+This work uses only public, non-personal data (aggregated passenger counts,
+infrastructure locations, and commercial amenity metadata). The intended
+use is operational planning, where accurate demand estimation can improve
+service efficiency and equity of access; failure modes (e.g.\ under-serving
+stops with systematically underestimated volume) are worth checking
+against ground truth before deployment. No individual-level data is
+involved.
+
+\bibliography{bib}
+\bibliographystyle{icml2025}
+
+\appendix
+\onecolumn
+\section{Appendix: Reproducibility}
+
+Code and setup instructions are in the project repository. The pipeline is
+three notebooks: \texttt{01\_eda.py} (data exploration and target
+design), \texttt{02\_features.py} (feature engineering and join), and
+\texttt{03\_model.py} (experiments, hyperparameter selection, and
+plotting). All random seeds are fixed.
+
+\end{document}
